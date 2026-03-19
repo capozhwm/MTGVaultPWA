@@ -442,8 +442,8 @@ textarea.text-input { height: 160px; resize: none; }
       <div class="step-icon">📄</div>
       <div class="step-title">Seleziona il PDF</div>
       <div class="step-desc">Carica un PDF con la lista carte di un set Magic. Il PDF deve avere testo selezionabile.</div>
-      <input type="file" id="pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="handlePDFFile(this)">
-      <button class="btn-gold" onclick="document.getElementById('pdf-input').click()">📂 Scegli PDF</button>
+      <label for="pdf-input" class="btn-gold" style="display:block;text-align:center;cursor:pointer;padding:14px 24px">📂 Scegli PDF</label>
+      <input type="file" id="pdf-input" accept=".pdf,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0" onchange="handlePDFFile(this)">
       <div class="divider"><div class="divider-line"></div><div class="divider-text">oppure</div><div class="divider-line"></div></div>
       <button class="btn-outline" onclick="showPasteMode()">📝 Incolla testo lista</button>
       <div class="divider"><div class="divider-line"></div><div class="divider-text">oppure</div><div class="divider-line"></div></div>
@@ -1175,5 +1175,4 @@ function renderStats() {
         const p = Math.round(v.owned/v.total*100);
         const col = RARITY_COLOR[r]||'#888';
         return `<div class="rarity-row">
-          <span class="rarity-lbl" style="color:${col}">${r}</span>
           <
