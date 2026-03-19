@@ -896,43 +896,49 @@ function parseLine(line, idx) {
   line = line.trim();
   if (!line || line.length < 4) return null;
 
-  // Format: "2 CARDS MAIN SET Name EN Name DE Name ES Name FR Name IT ..."
-  // Matches Marvel/multilingua Wizards format
-  const multiLang = line.match(/^(\d{1,4})\s+CARDS?\s+(?:MAIN\s+)?SET\s+(.+)$/i);
+  // Official Wizards multilingual checklist format
+  // "2 CARDS MAIN SET NameEN NameDE NameES NameFR NameIT Japanese"
+  const GERMAN_STOPS = new Set(['der','die','das','ein','eine','des','dem','den','und','von','im','am',
+    'haarsträubender','sinistrer','psionische','söldner','fliegende','beeindruckende',
+    'spektakulärer','meister','superschurken','netzwerfer','netzschießer','plötzlicher',
+    'fällige','freundliche','großer','spektakuläre','käfer','wissenschaftler',
+    'nachbarschaft','akrobatik','entstehungsgeschichte','klonsaga','chamäleon','straßentaube',
+    'tante','tía','le','la','les','du','de','el','los','las','un','una','aus',
+    'trupp','escuadrón','escouade','squadra']);
+  const hasCJK = w => /[\u3000-\u9FFF\u3040-\u30FF（）]/.test(w);
+  const hasUmlaut = w => /[äöüÄÖÜß]/.test(w);
+  const isPunct = w => /^[.…,;:!?¡¿]+$/.test(w);
+  const cleanName = words => {
+    while (words.length && isPunct(words[words.length-1]) && words[words.length-1] !== '.') words = words.slice(0,-1);
+    return words.join(' ');
+  };
+
+  const multiLang = line.match(/^(\d{1,4}[ab]?)\s+CARDS?\s+(?:MAIN\s+)?SET\s+(.+)$/i);
   if (multiLang) {
-    const num = multiLang[1].padStart(3,'0');
-    // The English name is the first "word group" before a repeated-pattern name
-    // We take text up to the first occurrence of what looks like a German/foreign word
-    // Simple approach: split on sequences of 2+ capital letters or known separators
-    const rest = multiLang[2].trim();
-    // Try to isolate English name: take up to first word that starts with uppercase
-    // followed by comma or another uppercase sequence typical of translations
-    // Best heuristic: English name ends before a German word (often same or similar)
-    // For safety just take first 1-4 words as the name
-    const words = rest.split(/\s+/);
-    // Find where the name ends by detecting repetition or foreign chars
-    let nameWords = [];
-    for (let i = 0; i < words.length; i++) {
-      const w = words[i];
-      // Stop at Japanese/Korean/Chinese characters
-      if (/[\u3000-\u9FFF\uAC00-\uD7AF]/.test(w)) break;
-      // Stop if we see a word that looks like a duplicate of an earlier word (translation)
-      if (i > 0 && nameWords.length >= 2) {
-        const joined = nameWords.join(' ').toLowerCase();
-        if (joined.includes(w.toLowerCase()) && w.length > 3) break;
+    const rawNum = multiLang[1];
+    const suffix = rawNum.match(/[ab]$/) ? rawNum.slice(-1) : '';
+    const num = rawNum.replace(/[ab]$/,'').padStart(3,'0') + suffix;
+    const words = multiLang[2].trim().split(/\s+/);
+    let candidate = [];
+    for (let i = 0; i < Math.min(words.length-1, 11); i++) {
+      candidate = words.slice(0, i+1);
+      const nw = words[i+1];
+      if (isPunct(nw)) continue;
+      if (hasCJK(nw)) return { collectorNumber: num, name: cleanName(candidate), rarity: 'Common', type: 'Unknown', manaCost: '', colors: ['C'] };
+      if (hasUmlaut(nw)) return { collectorNumber: num, name: cleanName(candidate), rarity: 'Common', type: 'Unknown', manaCost: '', colors: ['C'] };
+      if (GERMAN_STOPS.has(nw.toLowerCase().replace(/[.,;-]+$/,''))) return { collectorNumber: num, name: cleanName(candidate), rarity: 'Common', type: 'Unknown', manaCost: '', colors: ['C'] };
+      if (nw === candidate[0] && candidate[0].length > 2) return { collectorNumber: num, name: cleanName(candidate), rarity: 'Common', type: 'Unknown', manaCost: '', colors: ['C'] };
+      if (nw.toLowerCase().startsWith(candidate[0].toLowerCase() + '-') && candidate[0].length > 3) return { collectorNumber: num, name: cleanName(candidate), rarity: 'Common', type: 'Unknown', manaCost: '', colors: ['C'] };
+      if (JSON.stringify(words.slice(i+1, i+1+candidate.length)) === JSON.stringify(candidate)) return { collectorNumber: num, name: cleanName(candidate), rarity: 'Common', type: 'Unknown', manaCost: '', colors: ['C'] };
+      if (i >= 1 && nw.length > 4 && candidate.includes(nw)) return { collectorNumber: num, name: cleanName(candidate), rarity: 'Common', type: 'Unknown', manaCost: '', colors: ['C'] };
+      if (i >= 1 && nw.length > 4) {
+        for (const cw of candidate) {
+          if (!isPunct(cw) && cw.length > 4 && cw.toLowerCase().startsWith(nw.toLowerCase().slice(0,5)))
+            return { collectorNumber: num, name: cleanName(candidate), rarity: 'Common', type: 'Unknown', manaCost: '', colors: ['C'] };
+        }
       }
-      nameWords.push(w);
-      // Most MTG card names are 1-6 words
-      if (nameWords.length >= 6) break;
     }
-    return {
-      collectorNumber: num,
-      name: nameWords.join(' ').trim(),
-      rarity: 'Common',
-      type: 'Unknown',
-      manaCost: '',
-      colors: ['C']
-    };
+    return { collectorNumber: num, name: cleanName(candidate.length ? candidate : words.slice(0,8)), rarity: 'Common', type: 'Unknown', manaCost: '', colors: ['C'] };
   }
 
   // numbered: 001 Name Rarity Type
@@ -1170,46 +1176,4 @@ function renderStats() {
         const col = RARITY_COLOR[r]||'#888';
         return `<div class="rarity-row">
           <span class="rarity-lbl" style="color:${col}">${r}</span>
-          <div class="rarity-track"><div class="rarity-bar-fill" style="width:${p}%;background:${col}"></div></div>
-          <span class="rarity-stat">${v.owned}/${v.total}</span>
-        </div>`;
-      }).join('')}
-    </div>`;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════════════
-function exportData(fmt) {
-  let content, filename, mime;
-  if (fmt === 'csv') {
-    const rows = ['Set,Numero,Nome,Rarità,Tipo,Posseduta,Versioni'];
-    for (const set of state.sets) {
-      for (const c of set.cards) {
-        const v = c.versions.map(v=>`${v.language}|${v.isFoil?'FOIL':'STD'}|${v.condition}|${v.quantity}`).join('; ');
-        rows.push(`"${set.name}",${c.collectorNumber},"${c.name}",${c.rarity},"${c.type}",${c.owned?'SI':'NO'},"${v}"`);
-      }
-    }
-    content = rows.join('\n');
-    filename = `MTGVault_${new Date().toISOString().split('T')[0]}.csv`;
-    mime = 'text/csv';
-  } else {
-    content = JSON.stringify(state.sets, null, 2);
-    filename = `MTGVault_${new Date().toISOString().split('T')[0]}.json`;
-    mime = 'application/json';
-  }
-  const blob = new Blob([content], {type: mime});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  showToast('Export completato ✓');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════════════════════════════════════════
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.
+          <
