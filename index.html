@@ -621,20 +621,29 @@ function renderHome() {
     const owned = set.cards.filter(c => c.owned).length;
     const pct = set.cards.length > 0 ? Math.round(owned/set.cards.length*100) : 0;
     const foil = set.cards.filter(c => c.versions.some(v => v.isFoil)).length;
-    return `<div class="card set-card" onclick="openSet('${set.id}')">
-      <div class="set-header">
+    return `<div class="card set-card">
+      <div class="set-header" onclick="openSet('${set.id}')">
         <span class="set-code">${set.code}</span>
         <span class="set-name">${set.name}</span>
         <span class="set-pct">${pct}%</span>
       </div>
-      <div class="progress-bg"><div class="progress-fill" style="width:${pct}%;${pct===100?'background:var(--gold)':''}"></div></div>
+      <div class="progress-bg" onclick="openSet('${set.id}')"><div class="progress-fill" style="width:${pct}%;${pct===100?'background:var(--gold)':''}"></div></div>
       <div class="set-footer">
-        <span class="stat-text"><span class="stat-val">${owned}</span>/${set.cards.length} carte</span>
-        <span class="stat-text">${foil} ✦ foil</span>
-        <span class="stat-text" style="color:var(--text-muted);font-size:11px">${new Date(set.importedAt).toLocaleDateString('it-IT')}</span>
+        <span class="stat-text" onclick="openSet('${set.id}')"><span class="stat-val">${owned}</span>/${set.cards.length} carte</span>
+        <span class="stat-text" onclick="openSet('${set.id}')">${foil} ✦ foil</span>
+        <button onclick="deleteSet('${set.id}')" style="background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.3);border-radius:6px;color:var(--error);padding:4px 10px;cursor:pointer;font-size:12px;font-family:'Crimson Pro',serif">🗑 Elimina</button>
       </div>
     </div>`;
   }).join('');
+}
+
+function deleteSet(setId) {
+  const set = state.sets.find(s => s.id === setId);
+  if (!confirm('Eliminare "' + set.name + '"? Tutti i dati andranno persi.')) return;
+  state.sets = state.sets.filter(s => s.id !== setId);
+  save();
+  renderHome();
+  showToast('Set eliminato');
 }
 
 function openSet(setId) {
@@ -1203,22 +1212,4 @@ function exportData(fmt) {
 let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════════════════════
-load();
-renderHome();
-
-// Register Service Worker for PWA
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
-</script>
-</body>
-</html>
+  t.
