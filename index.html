@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0D0D12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MTG Vault">
+<title>MTG Vault</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root {
+  --bg: #0D0D12;
+  --bg-card: #14141E;
+  --bg-elevated: #1C1C2A;
+  --bg-input: #1A1A26;
+  --border: #2A2A3E;
+  --border-accent: #4A3F6B;
+  --gold: #C9A84C;
+  --gold-light: #E8C870;
+  --gold-dark: #8B6914;
+  --blue: #4A90D9;
+  --purple: #9B59B6;
+  --red: #E74C3C;
+  --green: #27AE60;
+  --gray: #95A5A6;
+  --mythic: #FF6B35;
+  --rare: #C9A84C;
+  --uncommon: #B8C4CC;
+  --common: #8A8A9A;
+  --land: #6B8F71;
+  --text: #E8E0D0;
+  --text-sec: #8A8098;
+  --text-muted: #4A445A;
+  --success: #2ECC71;
+  --error: #E74C3C;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Crimson Pro', Georgia, serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; min-height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ── HEADER ── */
+.header {
+  padding: 48px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky; top: 0; z-index: 10;
+}
+.header-row { display: flex; align-items: center; gap: 12px; }
+.back-btn {
+  background: none; border: none; color: var(--gold);
+  font-size: 32px; cursor: pointer; line-height: 1; padding: 0 8px 0 0;
+}
+.header h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 26px; letter-spacing: 1px; }
+.header h2 { font-family: 'Cinzel', serif; color: var(--text); font-size: 18px; }
+.header-sub { color: var(--text-sec); font-size: 13px; margin-top: 2px; }
+
+/* ── BODY ── */
+.body { flex: 1; padding: 16px; overflow-y: auto; }
+
+/* ── BUTTONS ── */
+.btn-gold {
+  background: var(--gold); color: var(--bg);
+  border: none; border-radius: 10px; padding: 14px 24px;
+  font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700;
+  cursor: pointer; width: 100%; letter-spacing: 0.5px;
+  transition: background 0.2s; box-shadow: 0 4px 12px rgba(201,168,76,0.3);
+}
+.btn-gold:active { background: var(--gold-dark); }
+.btn-outline {
+  background: none; color: var(--text-sec);
+  border: 1px solid var(--border); border-radius: 10px; padding: 14px 24px;
+  font-family: 'Crimson Pro', serif; font-size: 15px; cursor: pointer; width: 100%;
+}
+.btn-icon {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 10px; padding: 13px 16px; font-size: 18px;
+  cursor: pointer; white-space: nowrap;
+}
+
+/* ── ACTION ROW ── */
+.action-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.action-row .btn-gold { flex: 1; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px; margin-bottom: 12px;
+}
+
+/* ── SET CARD ── */
+.set-card { cursor: pointer; transition: border-color 0.2s; }
+.set-card:active { border-color: var(--gold); }
+.set-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.set-code {
+  background: var(--bg-elevated); border: 1px solid var(--border-accent);
+  border-radius: 6px; padding: 3px 8px;
+  font-family: 'Courier New', monospace; color: var(--gold); font-size: 12px; font-weight: 700;
+}
+.set-name { flex: 1; font-size: 16px; font-weight: 600; color: var(--text); }
+.set-pct { color: var(--gold); font-weight: 700; font-size: 14px; }
+.progress-bg { height: 4px; background: var(--bg-elevated); border-radius: 2px; margin-bottom: 12px; }
+.progress-fill { height: 4px; background: var(--blue); border-radius: 2px; transition: width 0.8s ease; }
+.set-footer { display: flex; justify-content: space-between; }
+.stat-text { color: var(--text-sec); font-size: 12px; }
+.stat-val { color: var(--text); font-weight: 600; }
+
+/* ── SEARCH & FILTERS ── */
+.search-input {
+  width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 10px; padding: 11px 14px; color: var(--text);
+  font-size: 15px; font-family: 'Crimson Pro', serif; margin-bottom: 10px;
+}
+.search-input::placeholder { color: var(--text-muted); }
+.filter-row { display: flex; gap: 8px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 4px; }
+.filter-row::-webkit-scrollbar { display: none; }
+.chip {
+  padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--bg-card); color: var(--text-sec); font-size: 13px;
+  cursor: pointer; white-space: nowrap; font-family: 'Crimson Pro', serif;
+}
+.chip.active { background: var(--gold); border-color: var(--gold); color: var(--bg); font-weight: 700; }
+
+/* ── CARD ROW ── */
+.card-row {
+  display: flex; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; margin-bottom: 6px; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.card-row.owned { border-color: var(--border-accent); }
+.card-row:active { opacity: 0.8; }
+.rarity-bar { width: 4px; flex-shrink: 0; }
+.card-info { flex: 1; padding: 10px; }
+.card-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.card-num { color: var(--text-muted); font-size: 11px; font-family: monospace; width: 28px; }
+.card-name { flex: 1; font-weight: 600; font-size: 14px; color: var(--text); }
+.foil-star { color: var(--gold); font-size: 13px; }
+.card-bottom { display: flex; align-items: center; gap: 4px; }
+.card-type { color: var(--text-sec); font-size: 11px; flex: 1; }
+.mana-sym {
+  width: 15px; height: 15px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px; font-weight: 700; color: var(--bg); flex-shrink: 0;
+}
+.card-right { padding: 0 12px; display: flex; align-items: center; justify-content: center; }
+.owned-qty { color: var(--success); font-weight: 700; font-size: 16px; }
+.missing-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+
+/* ── CARD DETAIL ── */
+.hero {
+  background: var(--bg-card); padding: 48px 20px 20px;
+  border-bottom: 2px solid var(--border);
+}
+.hero-content { display: flex; align-items: flex-start; gap: 16px; }
+.hero-left { flex: 1; }
+.rarity-badge {
+  display: inline-block; padding: 3px 8px; border-radius: 6px;
+  border: 1px solid; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.hero-name { font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.hero-type { color: var(--text-sec); font-size: 13px; margin-bottom: 4px; }
+.hero-mana { color: var(--gold); font-size: 13px; font-family: monospace; }
+.mana-circle {
+  width: 52px; height: 52px; border-radius: 50%; border: 2px solid;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; flex-shrink: 0;
+}
+.collector-num { color: var(--text-muted); font-size: 11px; font-family: monospace; text-align: center; margin-top: 4px; }
+.pt-text { color: var(--text); font-weight: 700; font-size: 16px; text-align: center; }
+
+.status-bar {
+  border-radius: 8px; padding: 12px; text-align: center;
+  font-weight: 600; font-size: 15px; margin-bottom: 16px;
+}
+.status-owned { background: rgba(46,204,113,0.1); border: 1px solid rgba(46,204,113,0.4); color: var(--success); }
+.status-missing { background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text-sec); }
+
+.section-title {
+  color: var(--text-sec); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 8px;
+}
+
+/* ── VERSION BADGE ── */
+.version-badge {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.version-badge.foil { border-color: rgba(201,168,76,0.5); background: rgba(201,168,76,0.05); }
+.version-info { flex: 1; display: flex; align-items: center; gap: 10px; }
+.version-lang { color: var(--text); font-weight: 700; font-size: 15px; }
+.foil-badge { color: var(--gold); font-size: 12px; font-weight: 700; }
+.version-cond { color: var(--text-sec); font-size: 13px; }
+.version-qty { color: var(--success); font-weight: 700; font-size: 16px; margin-left: auto; }
+.version-actions { display: flex; gap: 6px; }
+.v-btn {
+  background: var(--bg-elevated); border: none; border-radius: 6px;
+  padding: 6px 10px; color: var(--text); cursor: pointer; font-size: 14px;
+}
+.v-btn-danger { background: rgba(231,76,60,0.15); }
+
+.add-version-btn {
+  border: 1px dashed var(--gold); border-radius: 10px; padding: 14px;
+  text-align: center; color: var(--gold); font-weight: 600;
+  cursor: pointer; font-size: 15px; width: 100%; background: none;
+  font-family: 'Crimson Pro', serif;
+}
+
+/* ── INFO GRID ── */
+.info-grid { background: var(--bg-card); border-radius: 12px; padding: 16px; border: 1px solid var(--border); }
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--text-sec); font-size: 13px; }
+.info-value { color: var(--text); font-size: 13px; font-weight: 500; text-align: right; max-width: 60%; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  display: none; align-items: flex-end; z-index: 100;
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  background: var(--bg-card); border-radius: 24px 24px 0 0;
+  padding: 24px; padding-bottom: 40px; width: 100%;
+  border-top: 1px solid var(--border); max-height: 90vh; overflow-y: auto;
+}
+.modal-title { color: var(--text); font-size: 18px; font-weight: 700; margin-bottom: 20px; font-family: 'Cinzel', serif; }
+.field-label { color: var(--text-sec); font-size: 12px; font-weight: 600; margin-bottom: 8px; margin-top: 16px; display: block; }
+.option-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.option-scroll::-webkit-scrollbar { display: none; }
+.opt-chip {
+  padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg-elevated); color: var(--text-sec); cursor: pointer;
+  white-space: nowrap; font-family: 'Crimson Pro', serif; font-size: 14px;
+}
+.opt-chip.active { background: var(--gold); border-color: var(--gold); color: var(--bg); font-weight: 700; }
+.foil-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+.toggle {
+  width: 48px; height: 26px; border-radius: 13px; background: var(--bg-elevated);
+  border: none; cursor: pointer; position: relative; transition: background 0.2s;
+}
+.toggle.on { background: rgba(201,168,76,0.4); }
+.toggle::after {
+  content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--text-muted); top: 3px; left: 3px; transition: transform 0.2s, background 0.2s;
+}
+.toggle.on::after { transform: translateX(22px); background: var(--gold); }
+.cond-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.cond-chip {
+  padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg-elevated); cursor: pointer; text-align: center;
+}
+.cond-chip.active { background: rgba(74,144,217,0.2); border-color: var(--blue); }
+.cond-main { color: var(--text); font-weight: 700; font-size: 13px; }
+.cond-sub { color: var(--text-muted); font-size: 9px; }
+.qty-row { display: flex; align-items: center; gap: 20px; margin-top: 4px; }
+.qty-btn {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; width: 40px; height: 40px;
+  color: var(--text); font-size: 22px; cursor: pointer; line-height: 1;
+}
+.qty-val { color: var(--text); font-size: 28px; font-weight: 700; min-width: 40px; text-align: center; }
+.modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+.modal-actions .btn-outline { flex: 1; }
+.modal-actions .btn-gold { flex: 2; }
+
+/* ── IMPORT ── */
+.step-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px; display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+}
+.step-icon { font-size: 56px; }
+.step-title { font-family: 'Cinzel', serif; font-size: 20px; text-align: center; color: var(--text); }
+.step-desc { color: var(--text-sec); text-align: center; line-height: 1.6; font-size: 15px; }
+.text-input {
+  width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; color: var(--text);
+  font-size: 15px; font-family: 'Crimson Pro', serif;
+}
+.text-input::placeholder { color: var(--text-muted); }
+textarea.text-input { height: 160px; resize: none; }
+.tip-box {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; width: 100%;
+}
+.tip-title { color: var(--text); font-weight: 600; margin-bottom: 6px; font-size: 14px; }
+.tip-text { color: var(--text-sec); font-size: 13px; line-height: 1.8; }
+.divider { display: flex; align-items: center; gap: 10px; width: 100%; }
+.divider-line { flex: 1; height: 1px; background: var(--border); }
+.divider-text { color: var(--text-muted); font-size: 13px; }
+
+/* ── STATS ── */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.stat-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; text-align: center;
+}
+.stat-big { font-size: 28px; font-weight: 700; font-family: 'Cinzel', serif; }
+.stat-lbl { color: var(--text-sec); font-size: 13px; margin-top: 4px; }
+.hero-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px; display: flex; align-items: center;
+  gap: 20px; margin-bottom: 16px;
+}
+.hero-stats-row { display: flex; align-items: baseline; gap: 2px; margin-top: 8px; }
+.hero-num { color: var(--gold); font-size: 36px; font-weight: 700; font-family: 'Cinzel', serif; }
+.hero-slash { color: var(--text-muted); font-size: 24px; }
+.hero-tot { color: var(--text-sec); font-size: 24px; }
+.circle-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+.circle-svg { transform: rotate(-90deg); }
+.circle-bg { fill: none; stroke: var(--bg-elevated); stroke-width: 8; }
+.circle-fill { fill: none; stroke: var(--gold); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+.circle-label {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; font-family: 'Cinzel', serif; color: var(--gold);
+  font-size: 16px; font-weight: 700;
+}
+.rarity-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.rarity-lbl { width: 72px; font-size: 13px; font-weight: 600; }
+.rarity-track { flex: 1; height: 6px; background: var(--bg-elevated); border-radius: 3px; }
+.rarity-bar-fill { height: 6px; border-radius: 3px; transition: width 0.8s ease; }
+.rarity-stat { color: var(--text-sec); font-size: 12px; width: 48px; text-align: right; }
+
+/* ── EXPORT ── */
+.export-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px; display: flex; align-items: center;
+  gap: 16px; margin-bottom: 12px; cursor: pointer;
+}
+.export-card:active { opacity: 0.8; }
+.export-icon { font-size: 36px; }
+.export-info { flex: 1; }
+.export-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; font-family: 'Cinzel', serif; }
+.export-desc { color: var(--text-sec); font-size: 13px; }
+.export-arrow { font-size: 28px; }
+
+/* ── EMPTY STATE ── */
+.empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; }
+.empty-icon { font-size: 64px; margin-bottom: 20px; }
+.empty-title { font-family: 'Cinzel', serif; font-size: 20px; color: var(--text); margin-bottom: 10px; }
+.empty-text { color: var(--text-sec); line-height: 1.6; margin-bottom: 24px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 20px; color: var(--text);
+  font-size: 14px; z-index: 200; transition: transform 0.3s ease;
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── LOADING ── */
+.loading { display: flex; align-items: center; justify-content: center; padding: 40px; flex-direction: column; gap: 16px; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ HOME ═══════════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <div class="header">
+    <h1>⚔ MTG Vault</h1>
+    <div class="header-sub" id="home-sub">0 set importati</div>
+  </div>
+  <div class="body">
+    <div class="action-row">
+      <button class="btn-gold" onclick="showScreen('import')">＋ Importa PDF</button>
+      <button class="btn-icon" onclick="showScreen('stats')">📊</button>
+      <button class="btn-icon" onclick="showScreen('export')">↗</button>
+    </div>
+    <div id="sets-list"></div>
+    <div id="home-empty" class="empty" style="display:none">
+      <div class="empty-icon">🗃</div>
+      <div class="empty-title">Nessun set importato</div>
+      <div class="empty-text">Importa un PDF o incolla il testo di una lista carte Magic per iniziare.</div>
+      <button class="btn-gold" style="max-width:240px" onclick="loadDemo()">Carica set demo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SET DETAIL ═══════════════════════════════════════ -->
+<div id="screen-set" class="screen">
+  <div class="header">
+    <div class="header-row">
+      <button class="back-btn" onclick="showScreen('home')">‹</button>
+      <div>
+        <div class="header h2" id="set-title" style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--text)"></div>
+        <div class="header-sub" id="set-stats-sub"></div>
+      </div>
+    </div>
+    <input class="search-input" id="card-search" placeholder="Cerca carta..." oninput="filterCards()" style="margin-top:12px">
+    <div class="filter-row" id="filter-row"></div>
+    <div class="filter-row" id="rarity-row"></div>
+  </div>
+  <div class="body" style="padding-top:0">
+    <div id="cards-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ CARD DETAIL ═══════════════════════════════════════ -->
+<div id="screen-card" class="screen">
+  <div id="card-hero" class="hero"></div>
+  <div class="body">
+    <div id="card-status"></div>
+    <div class="section-title">Le mie copie</div>
+    <div id="versions-list"></div>
+    <button class="add-version-btn" onclick="openVersionEditor()">＋ Aggiungi versione</button>
+    <div class="section-title">Dettagli carta</div>
+    <div id="card-info-grid" class="info-grid"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ IMPORT ═══════════════════════════════════════ -->
+<div id="screen-import" class="screen">
+  <div class="header">
+    <div class="header-row">
+      <button class="back-btn" onclick="showScreen('home')">‹</button>
+      <div class="header h2" style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--text)">Importa Set</div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="step-card">
+      <div class="step-icon">📄</div>
+      <div class="step-title">Seleziona il PDF</div>
+      <div class="step-desc">Carica un PDF con la lista carte di un set Magic. Il PDF deve avere testo selezionabile.</div>
+      <input type="file" id="pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="handlePDFFile(this)">
+      <button class="btn-gold" onclick="document.getElementById('pdf-input').click()">📂 Scegli PDF</button>
+      <div class="divider"><div class="divider-line"></div><div class="divider-text">oppure</div><div class="divider-line"></div></div>
+      <button class="btn-outline" onclick="showPasteMode()">📝 Incolla testo lista</button>
+      <div class="divider"><div class="divider-line"></div><div class="divider-text">oppure</div><div class="divider-line"></div></div>
+      <button class="btn-outline" onclick="loadDemo()">🎲 Carica set dimostrativo</button>
+      <div class="tip-box">
+        <div class="tip-title">💡 Formati supportati</div>
+        <div class="tip-text">
+          • Liste ufficiali Wizards of the Coast<br>
+          • Export da MTGGoldfish, Moxfield, Scryfall<br>
+          • Tabelle con: numero | nome | rarità | tipo<br>
+          • Separatori: spazio, | (pipe), tab
+        </div>
+      </div>
+    </div>
+
+    <div id="paste-section" style="display:none; margin-top:12px">
+      <div class="step-card">
+        <div class="step-icon">📝</div>
+        <div class="step-title">Incolla lista carte</div>
+        <label class="field-label" style="align-self:flex-start">Nome set</label>
+        <input class="text-input" id="paste-setname" placeholder="es. Dominaria United" style="width:100%">
+        <label class="field-label" style="align-self:flex-start">Codice set</label>
+        <input class="text-input" id="paste-setcode" placeholder="es. DMU" maxlength="5" style="width:100%;text-transform:uppercase">
+        <label class="field-label" style="align-self:flex-start">Testo lista</label>
+        <textarea class="text-input" id="paste-text" placeholder="001 Lightning Bolt Common Instant&#10;002 Counterspell Common Instant&#10;..."></textarea>
+        <button class="btn-gold" onclick="parsePasteText()">Analizza →</button>
+      </div>
+    </div>
+
+    <div id="import-preview" style="display:none; margin-top:12px">
+      <div class="step-card">
+        <div class="step-icon">✅</div>
+        <div class="step-title">Anteprima</div>
+        <div id="preview-count" style="font-size:40px;font-weight:700;color:var(--gold);font-family:'Cinzel',serif"></div>
+        <div style="color:var(--text-sec)">carte rilevate</div>
+        <label class="field-label" style="align-self:flex-start">Nome set</label>
+        <input class="text-input" id="confirm-setname" style="width:100%">
+        <label class="field-label" style="align-self:flex-start">Codice set</label>
+        <input class="text-input" id="confirm-setcode" maxlength="5" style="width:100%;text-transform:uppercase">
+        <button class="btn-gold" onclick="confirmImport()">Importa ✓</button>
+        <button class="btn-outline" onclick="cancelImport()">← Modifica</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ STATS ═══════════════════════════════════════ -->
+<div id="screen-stats" class="screen">
+  <div class="header">
+    <div class="header-row">
+      <button class="back-btn" onclick="showScreen('home')">‹</button>
+      <div class="header h2" style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--text)">Statistiche</div>
+    </div>
+  </div>
+  <div class="body" id="stats-body"></div>
+</div>
+
+<!-- ═══════════════════════════════════════ EXPORT ═══════════════════════════════════════ -->
+<div id="screen-export" class="screen">
+  <div class="header">
+    <div class="header-row">
+      <button class="back-btn" onclick="showScreen('home')">‹</button>
+      <div class="header h2" style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--text)">Esporta</div>
+    </div>
+  </div>
+  <div class="body">
+    <div style="color:var(--text-sec);margin-bottom:16px;font-size:15px">Esporta la tua collezione per backup o analisi.</div>
+    <div class="export-card" onclick="exportData('csv')">
+      <div class="export-icon">📊</div>
+      <div class="export-info">
+        <div class="export-title" style="color:var(--green)">Esporta CSV</div>
+        <div class="export-desc">Compatibile con Excel e Google Sheets</div>
+      </div>
+      <div class="export-arrow" style="color:var(--green)">›</div>
+    </div>
+    <div class="export-card" onclick="exportData('json')">
+      <div class="export-icon">🗂</div>
+      <div class="export-info">
+        <div class="export-title" style="color:var(--blue)">Esporta JSON</div>
+        <div class="export-desc">Backup completo reimportabile</div>
+      </div>
+      <div class="export-arrow" style="color:var(--blue)">›</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ VERSION EDITOR MODAL ═══════════════════════════════════════ -->
+<div id="version-modal" class="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-title" id="modal-title">Aggiungi versione</div>
+    <span class="field-label">Lingua</span>
+    <div class="option-scroll" id="lang-options"></div>
+    <div class="foil-row">
+      <span class="field-label" style="margin:0">✦ Versione Foil</span>
+      <button class="toggle" id="foil-toggle" onclick="toggleFoil()"></button>
+    </div>
+    <span class="field-label">Condizione</span>
+    <div class="cond-row" id="cond-options"></div>
+    <span class="field-label">Quantità</span>
+    <div class="qty-row">
+      <button class="qty-btn" onclick="changeQty(-1)">−</button>
+      <div class="qty-val" id="qty-val">1</div>
+      <button class="qty-btn" onclick="changeQty(1)">＋</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeVersionModal()">Annulla</button>
+      <button class="btn-gold" onclick="saveVersion()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+const LANGUAGES = ['IT','EN','DE','FR','ES','PT','JA','KO','RU','ZHS','ZHT'];
+const CONDITIONS = [
+  {k:'M',l:'Mint'},{k:'NM',l:'Near Mint'},{k:'EX',l:'Excellent'},
+  {k:'GD',l:'Good'},{k:'LP',l:'Lt Played'},{k:'PL',l:'Played'},{k:'P',l:'Poor'}
+];
+const RARITY_COLOR = {Mythic:'#FF6B35',Rare:'#C9A84C',Uncommon:'#B8C4CC',Common:'#8A8A9A',Land:'#6B8F71',Special:'#FF69B4'};
+const MANA_COLOR = {W:'#F9FAF4',U:'#4A90D9',B:'#9B59B6',R:'#E74C3C',G:'#27AE60',C:'#95A5A6',M:'#F39C12'};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let state = {
+  sets: [],
+  currentSetId: null,
+  currentCardId: null,
+  cardFilter: 'all',
+  rarityFilter: 'all',
+  searchQuery: '',
+  // version editor
+  editingVersionId: null,
+  editorLang: 'IT',
+  editorFoil: false,
+  editorCond: 'NM',
+  editorQty: 1,
+  // import
+  pendingCards: [],
+  pendingText: '',
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════════════════════
+function save() { localStorage.setItem('mtgvault', JSON.stringify(state.sets)); }
+function load() {
+  try { state.sets = JSON.parse(localStorage.getItem('mtgvault')) || []; } catch { state.sets = []; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  if (name === 'home') renderHome();
+  if (name === 'stats') renderStats();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOME
+// ═══════════════════════════════════════════════════════════════════════════
+function renderHome() {
+  document.getElementById('home-sub').textContent = state.sets.length + ' set importati';
+  const list = document.getElementById('sets-list');
+  const empty = document.getElementById('home-empty');
+  if (state.sets.length === 0) { list.innerHTML = ''; empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+  list.innerHTML = state.sets.map(set => {
+    const owned = set.cards.filter(c => c.owned).length;
+    const pct = set.cards.length > 0 ? Math.round(owned/set.cards.length*100) : 0;
+    const foil = set.cards.filter(c => c.versions.some(v => v.isFoil)).length;
+    return `<div class="card set-card" onclick="openSet('${set.id}')">
+      <div class="set-header">
+        <span class="set-code">${set.code}</span>
+        <span class="set-name">${set.name}</span>
+        <span class="set-pct">${pct}%</span>
+      </div>
+      <div class="progress-bg"><div class="progress-fill" style="width:${pct}%;${pct===100?'background:var(--gold)':''}"></div></div>
+      <div class="set-footer">
+        <span class="stat-text"><span class="stat-val">${owned}</span>/${set.cards.length} carte</span>
+        <span class="stat-text">${foil} ✦ foil</span>
+        <span class="stat-text" style="color:var(--text-muted);font-size:11px">${new Date(set.importedAt).toLocaleDateString('it-IT')}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openSet(setId) {
+  state.currentSetId = setId;
+  state.cardFilter = 'all';
+  state.rarityFilter = 'all';
+  state.searchQuery = '';
+  document.getElementById('card-search').value = '';
+  const set = state.sets.find(s => s.id === setId);
+  document.getElementById('set-title').textContent = set.name;
+  renderSetFilters();
+  renderCards();
+  showScreen('set');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SET DETAIL
+// ═══════════════════════════════════════════════════════════════════════════
+function renderSetFilters() {
+  const filters = [{k:'all',l:'Tutte'},{k:'owned',l:'Possedute'},{k:'missing',l:'Mancanti'},{k:'foil',l:'✦ Foil'}];
+  document.getElementById('filter-row').innerHTML = filters.map(f =>
+    `<div class="chip ${state.cardFilter===f.k?'active':''}" onclick="setFilter('${f.k}')">${f.l}</div>`
+  ).join('');
+  const rarities = ['all','Mythic','Rare','Uncommon','Common','Land'];
+  document.getElementById('rarity-row').innerHTML = rarities.map(r => {
+    const color = r==='all' ? 'var(--text-sec)' : RARITY_COLOR[r];
+    return `<div class="chip ${state.rarityFilter===r?'active':''}" 
+      style="${state.rarityFilter===r?`background:${color}33;border-color:${color};color:${color}`:`color:${color}`}"
+      onclick="setRarity('${r}')">${r==='all'?'Tutte':r.charAt(0)}</div>`;
+  }).join('');
+}
+
+function setFilter(f) { state.cardFilter = f; renderSetFilters(); renderCards(); }
+function setRarity(r) { state.rarityFilter = r; renderSetFilters(); renderCards(); }
+function filterCards() { state.searchQuery = document.getElementById('card-search').value; renderCards(); }
+
+function renderCards() {
+  const set = state.sets.find(s => s.id === state.currentSetId);
+  if (!set) return;
+  const owned = set.cards.filter(c => c.owned).length;
+  const pct = set.cards.length > 0 ? Math.round(owned/set.cards.length*100) : 0;
+  document.getElementById('set-stats-sub').textContent = `${owned}/${set.cards.length} (${pct}%)`;
+
+  let cards = set.cards;
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    cards = cards.filter(c => c.name.toLowerCase().includes(q) || c.collectorNumber.includes(q) || c.type.toLowerCase().includes(q));
+  }
+  if (state.cardFilter === 'owned') cards = cards.filter(c => c.owned);
+  if (state.cardFilter === 'missing') cards = cards.filter(c => !c.owned);
+  if (state.cardFilter === 'foil') cards = cards.filter(c => c.versions.some(v => v.isFoil));
+  if (state.rarityFilter !== 'all') cards = cards.filter(c => c.rarity === state.rarityFilter);
+
+  const totalQtyOf = c => c.versions.reduce((s,v)=>s+v.quantity,0);
+  document.getElementById('cards-list').innerHTML = cards.map(c => {
+    const rc = RARITY_COLOR[c.rarity]||'#8A8A9A';
+    const mc = MANA_COLOR[c.colors[0]]||'#95A5A6';
+    const foil = c.versions.some(v=>v.isFoil);
+    return `<div class="card-row ${c.owned?'owned':''}" onclick="openCard('${c.id}')">
+      <div class="rarity-bar" style="background:${rc}"></div>
+      <div class="card-info">
+        <div class="card-top">
+          <span class="card-num">${c.collectorNumber}</span>
+          <span class="card-name">${c.name}</span>
+          ${foil?'<span class="foil-star">✦</span>':''}
+        </div>
+        <div class="card-bottom">
+          <div class="mana-sym" style="background:${mc}">${c.colors[0]}</div>
+          <span class="card-type">${c.type}</span>
+        </div>
+      </div>
+      <div class="card-right">
+        ${c.owned ? `<span class="owned-qty">×${totalQtyOf(c)}</span>` : '<div class="missing-dot"></div>'}
+      </div>
+    </div>`;
+  }).join('') || '<div style="color:var(--text-muted);text-align:center;padding:40px">Nessuna carta trovata</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CARD DETAIL
+// ═══════════════════════════════════════════════════════════════════════════
+function openCard(cardId) {
+  state.currentCardId = cardId;
+  renderCardDetail();
+  showScreen('card');
+}
+
+function getCard() {
+  const set = state.sets.find(s => s.id === state.currentSetId);
+  return set ? set.cards.find(c => c.id === state.currentCardId) : null;
+}
+
+function renderCardDetail() {
+  const card = getCard();
+  if (!card) return;
+  const rc = RARITY_COLOR[card.rarity]||'#8A8A9A';
+  const mc = MANA_COLOR[card.colors[0]]||'#95A5A6';
+
+  document.getElementById('card-hero').innerHTML = `
+    <button class="back-btn" onclick="showScreen('set')" style="margin-bottom:12px">‹</button>
+    <div class="hero-content">
+      <div class="hero-left">
+        <div class="rarity-badge" style="color:${rc};border-color:${rc};background:${rc}22">${card.rarity}</div>
+        <div class="hero-name">${card.name}</div>
+        <div class="hero-type">${card.type}</div>
+        ${card.manaCost?`<div class="hero-mana">${card.manaCost}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div class="mana-circle" style="color:var(--text);border-color:${mc};background:${mc}22">${card.colors.join('')}</div>
+        <div class="collector-num">#${card.collectorNumber}</div>
+        ${card.power?`<div class="pt-text">${card.power}/${card.toughness}</div>`:''}
+      </div>
+    </div>`;
+  document.getElementById('card-hero').style.borderBottomColor = rc;
+
+  const totalQty = card.versions.reduce((s,v)=>s+v.quantity,0);
+  document.getElementById('card-status').innerHTML = `<div class="status-bar ${card.owned?'status-owned':'status-missing'}">
+    ${card.owned ? `✓ Posseduta (${totalQty} ${totalQty===1?'copia':'copie'})` : '✗ Non posseduta'}
+  </div>`;
+
+  document.getElementById('versions-list').innerHTML = card.versions.map(v => `
+    <div class="version-badge ${v.isFoil?'foil':''}">
+      <div class="version-info">
+        <span class="version-lang">${v.language}</span>
+        ${v.isFoil?'<span class="foil-badge">✦ FOIL</span>':''}
+        <span class="version-cond">${v.condition}</span>
+        <span class="version-qty">×${v.quantity}</span>
+      </div>
+      <div class="version-actions">
+        <button class="v-btn" onclick="editVersion('${v.id}')">✎</button>
+        <button class="v-btn v-btn-danger" onclick="deleteVersion('${v.id}')">✕</button>
+      </div>
+    </div>`).join('') || '<div style="color:var(--text-muted);font-style:italic;margin-bottom:8px">Nessuna copia registrata</div>';
+
+  const infoRows = [
+    ['Set', `${card.setCode} — ${card.setName}`],
+    ['Numero', card.collectorNumber],
+    ['Rarità', card.rarity],
+    ['Tipo', card.type],
+    ['Costo mana', card.manaCost||'—'],
+    ['Colori', card.colors.join(', ')],
+    ...(card.power ? [['Forza/Res.', `${card.power}/${card.toughness}`]] : []),
+  ];
+  document.getElementById('card-info-grid').innerHTML = infoRows.map(([l,v]) =>
+    `<div class="info-row"><span class="info-label">${l}</span><span class="info-value">${v}</span></div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VERSION EDITOR
+// ═══════════════════════════════════════════════════════════════════════════
+function openVersionEditor(versionId=null) {
+  state.editingVersionId = versionId;
+  if (versionId) {
+    const card = getCard();
+    const v = card.versions.find(x=>x.id===versionId);
+    state.editorLang = v.language;
+    state.editorFoil = v.isFoil;
+    state.editorCond = v.condition;
+    state.editorQty = v.quantity;
+    document.getElementById('modal-title').textContent = 'Modifica versione';
+  } else {
+    state.editorLang = 'IT';
+    state.editorFoil = false;
+    state.editorCond = 'NM';
+    state.editorQty = 1;
+    document.getElementById('modal-title').textContent = 'Aggiungi versione';
+  }
+  renderModalOptions();
+  document.getElementById('version-modal').classList.add('open');
+}
+
+function renderModalOptions() {
+  document.getElementById('lang-options').innerHTML = LANGUAGES.map(l =>
+    `<div class="opt-chip ${state.editorLang===l?'active':''}" onclick="selectLang('${l}')">${l}</div>`
+  ).join('');
+  const t = document.getElementById('foil-toggle');
+  t.classList.toggle('on', state.editorFoil);
+  document.getElementById('cond-options').innerHTML = CONDITIONS.map(c =>
+    `<div class="cond-chip ${state.editorCond===c.k?'active':''}" onclick="selectCond('${c.k}')">
+      <div class="cond-main">${c.k}</div><div class="cond-sub">${c.l.split(' ')[0]}</div>
+    </div>`
+  ).join('');
+  document.getElementById('qty-val').textContent = state.editorQty;
+}
+
+function selectLang(l) { state.editorLang = l; renderModalOptions(); }
+function toggleFoil() { state.editorFoil = !state.editorFoil; renderModalOptions(); }
+function selectCond(c) { state.editorCond = c; renderModalOptions(); }
+function changeQty(d) { state.editorQty = Math.max(1, state.editorQty + d); document.getElementById('qty-val').textContent = state.editorQty; }
+function closeVersionModal() { document.getElementById('version-modal').classList.remove('open'); }
+
+function saveVersion() {
+  const set = state.sets.find(s => s.id === state.currentSetId);
+  const card = set.cards.find(c => c.id === state.currentCardId);
+  const v = { language: state.editorLang, isFoil: state.editorFoil, condition: state.editorCond, quantity: state.editorQty, acquiredDate: new Date().toISOString() };
+  if (state.editingVersionId) {
+    const idx = card.versions.findIndex(x=>x.id===state.editingVersionId);
+    card.versions[idx] = { ...card.versions[idx], ...v };
+  } else {
+    card.versions.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2), ...v });
+  }
+  card.owned = card.versions.length > 0;
+  save();
+  closeVersionModal();
+  renderCardDetail();
+  showToast('Versione salvata ✓');
+}
+
+function editVersion(vId) { openVersionEditor(vId); }
+
+function deleteVersion(vId) {
+  if (!confirm('Rimuovere questa versione?')) return;
+  const set = state.sets.find(s => s.id === state.currentSetId);
+  const card = set.cards.find(c => c.id === state.currentCardId);
+  card.versions = card.versions.filter(v=>v.id!==vId);
+  card.owned = card.versions.length > 0;
+  save();
+  renderCardDetail();
+  showToast('Versione rimossa');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PDF PARSER
+// ═══════════════════════════════════════════════════════════════════════════
+function detectRarity(t) {
+  t = t.toLowerCase();
+  if (t.includes('mythic')) return 'Mythic';
+  if (t.includes('rare')) return 'Rare';
+  if (t.includes('uncommon')) return 'Uncommon';
+  if (t.includes('common')) return 'Common';
+  if (t.includes('land')) return 'Land';
+  return 'Common';
+}
+
+function detectColors(t) {
+  const u = t.toUpperCase();
+  const found = [];
+  if (u.includes('{W}')) found.push('W');
+  if (u.includes('{U}')) found.push('U');
+  if (u.includes('{B}')) found.push('B');
+  if (u.includes('{R}')) found.push('R');
+  if (u.includes('{G}')) found.push('G');
+  if (found.length === 0) return ['C'];
+  if (found.length > 1) return ['M'];
+  return found;
+}
+
+function parseLine(line, idx) {
+  line = line.trim();
+  if (!line || line.length < 4) return null;
+  // numbered: 001 Name Rarity Type
+  const nm = line.match(/^(\d{1,3}[★a-zA-Z]?)\s+(.+?)\s+(Common|Uncommon|Rare|Mythic|Special|Land)\s*(.*)?$/i);
+  if (nm) return { collectorNumber: nm[1].padStart(3,'0'), name: nm[2].trim(), rarity: detectRarity(nm[3]), type: nm[4]?.trim()||'Unknown', manaCost:'', colors: detectColors(line) };
+  // pipe
+  const pp = line.split('|').map(s=>s.trim());
+  if (pp.length >= 3) {
+    if (/^\d+/.test(pp[0])) return { collectorNumber: pp[0].padStart(3,'0'), name: pp[1], rarity: detectRarity(pp[2]), type: pp[3]||'Unknown', manaCost:'', colors: ['C'] };
+    if (/^\d+/.test(pp[1])) return { collectorNumber: pp[1].padStart(3,'0'), name: pp[0], rarity: detectRarity(pp[2]), type: pp[3]||'Unknown', manaCost:'', colors: ['C'] };
+  }
+  // tab
+  const tt = line.split('\t').map(s=>s.trim()).filter(Boolean);
+  if (tt.length >= 2 && /^\d+/.test(tt[0])) return { collectorNumber: tt[0].padStart(3,'0'), name: tt[1], rarity: detectRarity(tt[2]||''), type: tt[3]||'Unknown', manaCost:'', colors: ['C'] };
+  return null;
+}
+
+function parseText(text, setName, setCode) {
+  const lines = text.split('\n');
+  const cards = [];
+  const seen = new Set();
+  let i = 0;
+  for (const [idx, line] of lines.entries()) {
+    const p = parseLine(line, idx);
+    if (!p || !p.name) continue;
+    if (seen.has(p.name.toLowerCase())) continue;
+    if (/^(page|set|total|cards|number|name|rarity|type|cost)/i.test(p.name)) continue;
+    seen.add(p.name.toLowerCase());
+    i++;
+    cards.push({
+      id: Date.now().toString(36)+Math.random().toString(36).slice(2)+i,
+      name: p.name, setCode, setName,
+      collectorNumber: p.collectorNumber||String(i).padStart(3,'0'),
+      rarity: p.rarity||'Common', type: p.type||'Unknown',
+      manaCost: p.manaCost||'', colors: p.colors||['C'],
+      owned: false, versions: []
+    });
+  }
+  return cards;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPORT
+// ═══════════════════════════════════════════════════════════════════════════
+async function handlePDFFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  showToast('Estrazione testo PDF...');
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(item => item.str).join(' ') + '\n';
+    }
+    state.pendingText = text;
+    const name = file.name.replace('.pdf','');
+    document.getElementById('confirm-setname').value = name;
+    document.getElementById('confirm-setcode').value = name.toUpperCase().slice(0,5).replace(/\s/g,'');
+    const cards = parseText(text, name, name.toUpperCase().slice(0,5));
+    state.pendingCards = cards;
+    document.getElementById('preview-count').textContent = cards.length;
+    document.getElementById('paste-section').style.display = 'none';
+    document.getElementById('import-preview').style.display = 'block';
+    showToast(`${cards.length} carte rilevate`);
+  } catch(e) {
+    showToast('Errore lettura PDF. Prova ad incollare il testo.');
+  }
+}
+
+function showPasteMode() {
+  document.getElementById('paste-section').style.display = 'block';
+  document.getElementById('import-preview').style.display = 'none';
+  document.getElementById('paste-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function parsePasteText() {
+  const text = document.getElementById('paste-text').value;
+  const name = document.getElementById('paste-setname').value || 'Set senza nome';
+  const code = document.getElementById('paste-setcode').value || 'XXX';
+  if (!text.trim()) { showToast('Incolla il testo prima'); return; }
+  const cards = parseText(text, name, code);
+  state.pendingCards = cards;
+  state.pendingText = text;
+  if (cards.length === 0) { showToast('Nessuna carta trovata. Controlla il formato.'); return; }
+  document.getElementById('preview-count').textContent = cards.length;
+  document.getElementById('confirm-setname').value = name;
+  document.getElementById('confirm-setcode').value = code.toUpperCase();
+  document.getElementById('import-preview').style.display = 'block';
+  document.getElementById('import-preview').scrollIntoView({ behavior: 'smooth' });
+}
+
+function confirmImport() {
+  const name = document.getElementById('confirm-setname').value.trim();
+  const code = document.getElementById('confirm-setcode').value.trim().toUpperCase();
+  if (!name || !code) { showToast('Inserisci nome e codice'); return; }
+  const set = {
+    id: Date.now().toString(36)+Math.random().toString(36).slice(2),
+    name, code,
+    importedAt: new Date().toISOString(),
+    totalCards: state.pendingCards.length,
+    cards: state.pendingCards.map(c => ({...c, setName: name, setCode: code}))
+  };
+  state.sets.push(set);
+  save();
+  state.pendingCards = [];
+  document.getElementById('import-preview').style.display = 'none';
+  document.getElementById('paste-section').style.display = 'none';
+  document.getElementById('pdf-input').value = '';
+  showToast(`"${name}" importato con ${set.totalCards} carte ✓`);
+  showScreen('home');
+}
+
+function cancelImport() {
+  document.getElementById('import-preview').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEMO
+// ═══════════════════════════════════════════════════════════════════════════
+function loadDemo() {
+  const demoCards = [
+    {name:'Liliana of the Veil',rarity:'Mythic',type:'Legendary Planeswalker',colors:['B'],collectorNumber:'097',manaCost:'{1}{B}{B}'},
+    {name:'Snapcaster Mage',rarity:'Rare',type:'Creature — Human Wizard',colors:['U'],collectorNumber:'078',manaCost:'{1}{U}'},
+    {name:'Lightning Bolt',rarity:'Common',type:'Instant',colors:['R'],collectorNumber:'166',manaCost:'{R}'},
+    {name:'Counterspell',rarity:'Common',type:'Instant',colors:['U'],collectorNumber:'054',manaCost:'{U}{U}'},
+    {name:'Wrath of God',rarity:'Rare',type:'Sorcery',colors:['W'],collectorNumber:'037',manaCost:'{2}{W}{W}'},
+    {name:'Dark Ritual',rarity:'Common',type:'Instant',colors:['B'],collectorNumber:'088',manaCost:'{B}'},
+    {name:'Birds of Paradise',rarity:'Rare',type:'Creature — Bird',colors:['G'],collectorNumber:'168',manaCost:'{G}'},
+    {name:'Aether Vial',rarity:'Uncommon',type:'Artifact',colors:['C'],collectorNumber:'001',manaCost:'{1}'},
+    {name:'Force of Will',rarity:'Rare',type:'Instant',colors:['U'],collectorNumber:'052',manaCost:'{3}{U}{U}'},
+    {name:'Tarmogoyf',rarity:'Mythic',type:'Creature — Lhurgoyf',colors:['G'],collectorNumber:'220',manaCost:'{1}{G}'},
+    {name:'Flooded Strand',rarity:'Rare',type:'Land',colors:['C'],collectorNumber:'240',manaCost:''},
+    {name:'Thoughtseize',rarity:'Rare',type:'Sorcery',colors:['B'],collectorNumber:'107',manaCost:'{B}'},
+    {name:'Cryptic Command',rarity:'Rare',type:'Instant',colors:['U'],collectorNumber:'047',manaCost:'{1}{U}{U}{U}'},
+    {name:'Blood Moon',rarity:'Rare',type:'Enchantment',colors:['R'],collectorNumber:'118',manaCost:'{2}{R}'},
+    {name:'Noble Hierarch',rarity:'Rare',type:'Creature — Human Druid',colors:['G'],collectorNumber:'181',manaCost:'{G}'},
+  ];
+  const set = {
+    id: Date.now().toString(36),
+    name: 'Set Dimostrativo MTG', code: 'DEMO',
+    importedAt: new Date().toISOString(),
+    totalCards: demoCards.length,
+    cards: demoCards.map((c,i) => ({
+      id: 'demo'+i, setCode:'DEMO', setName:'Set Dimostrativo MTG',
+      owned: false, versions: [], ...c
+    }))
+  };
+  state.sets.push(set);
+  save();
+  showToast('Set dimostrativo caricato ✓');
+  showScreen('home');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════════════════════════════
+function renderStats() {
+  const all = state.sets.flatMap(s => s.cards);
+  const owned = all.filter(c => c.owned).length;
+  const foil = all.flatMap(c => c.versions).filter(v => v.isFoil).length;
+  const pct = all.length > 0 ? Math.round(owned/all.length*100) : 0;
+  const r = 31;
+  const circ = 2*Math.PI*r;
+  const dash = (pct/100)*circ;
+
+  const byRarity = {};
+  for (const c of all) {
+    if (!byRarity[c.rarity]) byRarity[c.rarity] = {total:0,owned:0};
+    byRarity[c.rarity].total++;
+    if (c.owned) byRarity[c.rarity].owned++;
+  }
+
+  document.getElementById('stats-body').innerHTML = `
+    <div class="hero-card">
+      <div style="flex:1">
+        <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--text)">Completamento</div>
+        <div style="color:var(--text-sec);font-size:13px;margin-bottom:8px">totale collezione</div>
+        <div class="hero-stats-row">
+          <span class="hero-num">${owned}</span>
+          <span class="hero-slash">/</span>
+          <span class="hero-tot">${all.length}</span>
+          <span style="color:var(--text-sec);font-size:15px"> carte</span>
+        </div>
+      </div>
+      <div class="circle-wrap">
+        <svg class="circle-svg" width="80" height="80" viewBox="0 0 80 80">
+          <circle class="circle-bg" cx="40" cy="40" r="${r}"/>
+          <circle class="circle-fill" cx="40" cy="40" r="${r}"
+            stroke-dasharray="${circ}"
+            stroke-dashoffset="${circ - dash}"/>
+        </svg>
+        <div class="circle-label">${pct}%</div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-big" style="color:var(--blue)">${state.sets.length}</div><div class="stat-lbl">Set</div></div>
+      <div class="stat-card"><div class="stat-big" style="color:var(--gold)">${foil}</div><div class="stat-lbl">Foil ✦</div></div>
+      <div class="stat-card"><div class="stat-big" style="color:var(--error)">${all.length-owned}</div><div class="stat-lbl">Mancanti</div></div>
+      <div class="stat-card"><div class="stat-big" style="color:var(--success)">${pct}%</div><div class="stat-lbl">Completamento</div></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0">Per Rarità</div>
+      ${Object.entries(byRarity).filter(([,v])=>v.total>0).map(([r,v]) => {
+        const p = Math.round(v.owned/v.total*100);
+        const col = RARITY_COLOR[r]||'#888';
+        return `<div class="rarity-row">
+          <span class="rarity-lbl" style="color:${col}">${r}</span>
+          <div class="rarity-track"><div class="rarity-bar-fill" style="width:${p}%;background:${col}"></div></div>
+          <span class="rarity-stat">${v.owned}/${v.total}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════════════════
+function exportData(fmt) {
+  let content, filename, mime;
+  if (fmt === 'csv') {
+    const rows = ['Set,Numero,Nome,Rarità,Tipo,Posseduta,Versioni'];
+    for (const set of state.sets) {
+      for (const c of set.cards) {
+        const v = c.versions.map(v=>`${v.language}|${v.isFoil?'FOIL':'STD'}|${v.condition}|${v.quantity}`).join('; ');
+        rows.push(`"${set.name}",${c.collectorNumber},"${c.name}",${c.rarity},"${c.type}",${c.owned?'SI':'NO'},"${v}"`);
+      }
+    }
+    content = rows.join('\n');
+    filename = `MTGVault_${new Date().toISOString().split('T')[0]}.csv`;
+    mime = 'text/csv';
+  } else {
+    content = JSON.stringify(state.sets, null, 2);
+    filename = `MTGVault_${new Date().toISOString().split('T')[0]}.json`;
+    mime = 'application/json';
+  }
+  const blob = new Blob([content], {type: mime});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  showToast('Export completato ✓');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
+load();
+renderHome();
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
