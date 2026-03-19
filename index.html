@@ -886,6 +886,46 @@ function detectColors(t) {
 function parseLine(line, idx) {
   line = line.trim();
   if (!line || line.length < 4) return null;
+
+  // Format: "2 CARDS MAIN SET Name EN Name DE Name ES Name FR Name IT ..."
+  // Matches Marvel/multilingua Wizards format
+  const multiLang = line.match(/^(\d{1,4})\s+CARDS?\s+(?:MAIN\s+)?SET\s+(.+)$/i);
+  if (multiLang) {
+    const num = multiLang[1].padStart(3,'0');
+    // The English name is the first "word group" before a repeated-pattern name
+    // We take text up to the first occurrence of what looks like a German/foreign word
+    // Simple approach: split on sequences of 2+ capital letters or known separators
+    const rest = multiLang[2].trim();
+    // Try to isolate English name: take up to first word that starts with uppercase
+    // followed by comma or another uppercase sequence typical of translations
+    // Best heuristic: English name ends before a German word (often same or similar)
+    // For safety just take first 1-4 words as the name
+    const words = rest.split(/\s+/);
+    // Find where the name ends by detecting repetition or foreign chars
+    let nameWords = [];
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i];
+      // Stop at Japanese/Korean/Chinese characters
+      if (/[\u3000-\u9FFF\uAC00-\uD7AF]/.test(w)) break;
+      // Stop if we see a word that looks like a duplicate of an earlier word (translation)
+      if (i > 0 && nameWords.length >= 2) {
+        const joined = nameWords.join(' ').toLowerCase();
+        if (joined.includes(w.toLowerCase()) && w.length > 3) break;
+      }
+      nameWords.push(w);
+      // Most MTG card names are 1-6 words
+      if (nameWords.length >= 6) break;
+    }
+    return {
+      collectorNumber: num,
+      name: nameWords.join(' ').trim(),
+      rarity: 'Common',
+      type: 'Unknown',
+      manaCost: '',
+      colors: ['C']
+    };
+  }
+
   // numbered: 001 Name Rarity Type
   const nm = line.match(/^(\d{1,3}[★a-zA-Z]?)\s+(.+?)\s+(Common|Uncommon|Rare|Mythic|Special|Land)\s*(.*)?$/i);
   if (nm) return { collectorNumber: nm[1].padStart(3,'0'), name: nm[2].trim(), rarity: detectRarity(nm[3]), type: nm[4]?.trim()||'Unknown', manaCost:'', colors: detectColors(line) };
