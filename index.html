@@ -973,17 +973,39 @@ async function handlePDFFile(input) {
   if (!file) return;
   showToast('Estrazione testo PDF...');
   try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    // Use fake worker to avoid CORS issues
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const loadingTask = pdfjsLib.getDocument({ 
+      data: arrayBuffer,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true
+    });
+    const pdf = await loadingTask.promise;
     let text = '';
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-      text += content.items.map(item => item.str).join(' ') + '\n';
+      // Join items with newline when y position changes significantly
+      let lastY = null;
+      let line = '';
+      for (const item of content.items) {
+        if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+          text += line + '\n';
+          line = '';
+        }
+        line += item.str + ' ';
+        lastY = item.transform[5];
+      }
+      if (line.trim()) text += line + '\n';
+    }
+    if (!text.trim()) {
+      showToast('PDF senza testo selezionabile. Usa "Incolla testo".');
+      return;
     }
     state.pendingText = text;
-    const name = file.name.replace('.pdf','');
+    const name = file.name.replace('.pdf','').replace(/_/g,' ');
     document.getElementById('confirm-setname').value = name;
     document.getElementById('confirm-setcode').value = name.toUpperCase().slice(0,5).replace(/\s/g,'');
     const cards = parseText(text, name, name.toUpperCase().slice(0,5));
@@ -991,9 +1013,11 @@ async function handlePDFFile(input) {
     document.getElementById('preview-count').textContent = cards.length;
     document.getElementById('paste-section').style.display = 'none';
     document.getElementById('import-preview').style.display = 'block';
+    document.getElementById('import-preview').scrollIntoView({behavior:'smooth'});
     showToast(`${cards.length} carte rilevate`);
   } catch(e) {
-    showToast('Errore lettura PDF. Prova ad incollare il testo.');
+    console.error(e);
+    showToast('Errore lettura PDF. Prova "Incolla testo".');
   }
 }
 
