@@ -442,8 +442,10 @@ textarea.text-input { height: 160px; resize: none; }
       <div class="step-icon">📄</div>
       <div class="step-title">Seleziona il PDF</div>
       <div class="step-desc">Carica un PDF con la lista carte di un set Magic. Il PDF deve avere testo selezionabile.</div>
-      <label for="pdf-input" class="btn-gold" style="display:block;text-align:center;cursor:pointer;padding:14px 24px">📂 Scegli PDF</label>
-      <input type="file" id="pdf-input" accept=".pdf,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0" onchange="handlePDFFile(this)">
+      <div style="position:relative;width:100%">
+        <label for="pdf-input" class="btn-gold" style="display:block;text-align:center;cursor:pointer;padding:14px 24px">📂 Scegli PDF</label>
+        <input type="file" id="pdf-input" accept=".pdf,application/pdf" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer" onchange="handlePDFFile(this)">
+      </div>
       <div class="divider"><div class="divider-line"></div><div class="divider-text">oppure</div><div class="divider-line"></div></div>
       <button class="btn-outline" onclick="showPasteMode()">📝 Incolla testo lista</button>
       <div class="divider"><div class="divider-line"></div><div class="divider-text">oppure</div><div class="divider-line"></div></div>
@@ -1175,4 +1177,65 @@ function renderStats() {
         const p = Math.round(v.owned/v.total*100);
         const col = RARITY_COLOR[r]||'#888';
         return `<div class="rarity-row">
-          <
+          <span class="rarity-lbl" style="color:${col}">${r}</span>
+          <div class="rarity-track"><div class="rarity-bar-fill" style="width:${p}%;background:${col}"></div></div>
+          <span class="rarity-stat">${v.owned}/${v.total}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════════════════
+function exportData(fmt) {
+  let content, filename, mime;
+  if (fmt === 'csv') {
+    const rows = ['Set,Numero,Nome,Rarità,Tipo,Posseduta,Versioni'];
+    for (const set of state.sets) {
+      for (const c of set.cards) {
+        const v = c.versions.map(v=>`${v.language}|${v.isFoil?'FOIL':'STD'}|${v.condition}|${v.quantity}`).join('; ');
+        rows.push(`"${set.name}",${c.collectorNumber},"${c.name}",${c.rarity},"${c.type}",${c.owned?'SI':'NO'},"${v}"`);
+      }
+    }
+    content = rows.join('\n');
+    filename = `MTGVault_${new Date().toISOString().split('T')[0]}.csv`;
+    mime = 'text/csv';
+  } else {
+    content = JSON.stringify(state.sets, null, 2);
+    filename = `MTGVault_${new Date().toISOString().split('T')[0]}.json`;
+    mime = 'application/json';
+  }
+  const blob = new Blob([content], {type: mime});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  showToast('Export completato ✓');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
+load();
+renderHome();
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
